@@ -121,7 +121,7 @@ def parse_date(s: str) -> date:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Add a 14-week calendar sheet to an Excel workbook.",
+        description="Create a new Excel file with a 14-week calendar sheet.",
         epilog="Example: gen_calendar.py 2026-04-05",
     )
     parser.add_argument(
@@ -129,9 +129,8 @@ def main():
         help="Start date (YYYY-MM-DD). Snapped to the preceding Sunday.",
     )
     parser.add_argument(
-        "--file", "-f",
-        default="Calendar Templates.xlsx",
-        help="Excel file path (default: 'Calendar Templates.xlsx')",
+        "--output", "-o",
+        help="Output file path (default: '<tab-name>.xlsx', e.g. 'Apr-Jun 2026.xlsx')",
     )
     parser.add_argument(
         "--weeks", "-w",
@@ -143,19 +142,18 @@ def main():
 
     start = prev_sunday(parse_date(args.start_date))
 
-    try:
-        wb = openpyxl.load_workbook(args.file)
-    except FileNotFoundError:
-        wb = openpyxl.Workbook()
-        if "Sheet" in wb.sheetnames:
-            del wb["Sheet"]
+    wb = openpyxl.Workbook()
+    if "Sheet" in wb.sheetnames:
+        del wb["Sheet"]
 
     build_sheet(wb, start, args.weeks)
-    wb.save(args.file)
 
     tab = tab_name(start, args.weeks)
+    out = args.output or f"{tab}.xlsx"
+    wb.save(out)
+
     end = start + timedelta(weeks=args.weeks) - timedelta(days=1)
-    print(f"Added sheet '{tab}' ({sheet_title(start, args.weeks)}) to {args.file}")
+    print(f"Created {out} — '{tab}' ({sheet_title(start, args.weeks)})")
     print(f"  {start} – {end} ({args.weeks} weeks)")
 
 
