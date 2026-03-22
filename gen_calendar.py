@@ -6,10 +6,13 @@ import sys
 from datetime import date, timedelta
 
 import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 
 GRAY_FILL = PatternFill(patternType="solid", fgColor="F0F0F0")
+_THIN = Side(style="thin")
+_TOP_BORDER    = Border(top=_THIN, left=_THIN, right=_THIN)
+_BOTTOM_BORDER = Border(bottom=_THIN, left=_THIN, right=_THIN)
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -103,10 +106,16 @@ def build_sheet(wb: openpyxl.Workbook, start: date, weeks: int = 14):
             idx = week * 7 + day_offset
             d = all_days[idx]
             prev = all_days[idx - 1] if idx > 0 else None
-            cell = ws.cell(row=date_row, column=2 + day_offset, value=cell_label(d, prev))
+            col = 2 + day_offset
+            cell = ws.cell(row=date_row, column=col, value=cell_label(d, prev))
             cell.alignment = left
+            cell.border = _TOP_BORDER
             if day_offset in (0, 6):
                 cell.fill = GRAY_FILL
+            bottom = ws.cell(row=empty_row, column=col)
+            bottom.border = _BOTTOM_BORDER
+            if day_offset in (0, 6):
+                bottom.fill = GRAY_FILL
 
     return ws
 
@@ -149,7 +158,7 @@ def main():
     build_sheet(wb, start, args.weeks)
 
     tab = tab_name(start, args.weeks)
-    out = args.output or f"{tab}.xlsx"
+    out = args.output or f"{tab} {start}.xlsx"
     wb.save(out)
 
     end = start + timedelta(weeks=args.weeks) - timedelta(days=1)
