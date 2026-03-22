@@ -7,7 +7,7 @@ argument-hint: <start-date YYYY-MM-DD>
 Extract the start date from $ARGUMENTS, then run:
 
 ```bash
-python3 gen_calendar.py <start-date>
+nix run .#gen-calendar -- <start-date>
 ```
 
 The date is snapped to the preceding Sunday automatically. If no date is given, ask the user for one.
