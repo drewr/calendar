@@ -8,14 +8,20 @@
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
     in {
-      packages = forAllSystems (pkgs: {
-        gcal-search = pkgs.rustPlatform.buildRustPackage {
-          pname = "gcal-search";
-          version = "0.1.0";
-          src = ./.;
-          cargoLock.lockFile = ./Cargo.lock;
-        };
-      });
+      packages = forAllSystems (pkgs:
+        let
+          gcal-search-unwrapped = pkgs.rustPlatform.buildRustPackage {
+            pname = "gcal-search";
+            version = "0.1.0";
+            src = ./.;
+            cargoLock.lockFile = ./Cargo.lock;
+          };
+        in {
+          gcal-search = pkgs.writeShellScriptBin "gcal-search" ''
+            export PATH="${pkgs.gcalcli}/bin:$PATH"
+            exec ${gcal-search-unwrapped}/bin/gcal-search "$@"
+          '';
+        });
 
       apps = forAllSystems (pkgs:
         let
