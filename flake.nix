@@ -21,6 +21,10 @@
             export PATH="${pkgs.gcalcli}/bin:$PATH"
             exec ${gcal-search-unwrapped}/bin/gcal-search "$@"
           '';
+          gcal-plan = pkgs.writeShellScriptBin "gcal-plan" ''
+            export PATH="${pkgs.gcalcli}/bin:$PATH"
+            exec ${gcal-search-unwrapped}/bin/gcal-plan "$@"
+          '';
         });
 
       apps = forAllSystems (pkgs:
@@ -32,6 +36,7 @@
         in {
           gen-calendar = { type = "app"; program = toString script; };
           gcal-search = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };
+          gcal-plan = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-plan}/bin/gcal-plan"; };
           default = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };
         });
 

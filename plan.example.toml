@@ -1,0 +1,16 @@
+[project]
+id = "bc4872e4"
+name = "Test Project"
+url = "https://github.com/org/repo/issues/1"
+calendar = "The Name of the Calendar in Google"
+timezone = "US/Central"
+
+[[milestones]]
+title = "Test Project Kickoff"
+date = "2026-06-01"
+time = "12:00"
+description = "Testing out a way to create calendar entries for important milestones and events"
+
+[[milestones]]
+title = "Design Complete"
+date = "2026-07-01"
