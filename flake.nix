@@ -26,10 +26,12 @@
             exec ${gcal-search-unwrapped}/bin/gcal-plan "$@"
           '';
           gen-calendar = gcal-search-unwrapped;
+          gen-project-schedule = gcal-search-unwrapped;
         });
 
       apps = forAllSystems (pkgs: {
         gen-calendar = { type = "app"; program = "${self.packages.${pkgs.system}.gen-calendar}/bin/gen-calendar"; };
+        gen-project-schedule = { type = "app"; program = "${self.packages.${pkgs.system}.gen-project-schedule}/bin/gen-project-schedule"; };
         gcal-search = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };
         gcal-plan = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-plan}/bin/gcal-plan"; };
         default = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };

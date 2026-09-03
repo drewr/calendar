@@ -26,6 +26,28 @@ nix run .#gen-calendar -- 2026-04-05
 
 ---
 
+## gen-project-schedule
+
+Create a new Excel file with a gantt-style project schedule: one column per week and one row per person, ready to fill in with what each person is working on.
+
+```
+gen-project-schedule <start-date> [weeks] [--output <path>] [--people <N>]
+```
+
+`start-date` (YYYY-MM-DD) is snapped to the preceding Monday. `weeks` defaults to 14. Column A is left blank for names; `--people` sets how many blank rows to create (default 15). Output defaults to `<tab-name> Schedule <start-date>.xlsx`.
+
+```
+gen-project-schedule 2026-09-01 12
+```
+
+### Running via Nix
+
+```
+nix run .#gen-project-schedule -- 2026-09-01 12
+```
+
+---
+
 ## gcal-plan
 
 Import a project plan into Google Calendar. Each milestone becomes a calendar event tagged with a unique project ID, so you can list, update, or remove the whole set later.
@@ -124,4 +146,5 @@ cargo build          # build all binaries
 cargo run --bin gcal-plan -- init
 cargo run --bin gcal-search -- "my query"
 cargo run --bin gen-calendar -- 2026-04-05
+cargo run --bin gen-project-schedule -- 2026-09-01 12
 ```
