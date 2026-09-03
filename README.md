@@ -1,10 +1,28 @@
 # calendar
 
-Tools for managing Google Calendar from the command line.
+Tools for managing calendars from the command line.
 
 ## Requirements
 
-[gcalcli](https://github.com/insanum/gcalcli) must be authenticated before using any of these tools. Run `gcalcli list` to verify your account is connected.
+`gen-calendar` has no external dependencies. `gcal-plan` and `gcal-search` require [gcalcli](https://github.com/insanum/gcalcli) to be authenticated first — run `gcalcli list` to verify your account is connected.
+
+---
+
+## gen-calendar
+
+Create a new Excel file with a 14-week calendar sheet.
+
+```
+gen-calendar <start-date> [--output <path>] [--weeks <N>]
+```
+
+`start-date` (YYYY-MM-DD) is snapped to the preceding Sunday. Output defaults to `<tab-name> <start-date>.xlsx` (e.g. `Apr-Jun 2026 2026-04-05.xlsx`); `--weeks` defaults to 14.
+
+### Running via Nix
+
+```
+nix run .#gen-calendar -- 2026-04-05
+```
 
 ---
 
@@ -102,7 +120,8 @@ nix run .#gcal-search -- "standup" --calendar "Datum Engineering" --format csv
 ## Development
 
 ```
-cargo build          # build both binaries
+cargo build          # build all binaries
 cargo run --bin gcal-plan -- init
 cargo run --bin gcal-search -- "my query"
+cargo run --bin gen-calendar -- 2026-04-05
 ```

@@ -1,5 +1,5 @@
 {
-  description = "Calendar tools — sheet generator and Google Calendar search";
+  description = "Calendar tools — sheet generator, Google Calendar search and planning";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
@@ -25,25 +25,19 @@
             export PATH="${pkgs.gcalcli}/bin:$PATH"
             exec ${gcal-search-unwrapped}/bin/gcal-plan "$@"
           '';
+          gen-calendar = gcal-search-unwrapped;
         });
 
-      apps = forAllSystems (pkgs:
-        let
-          python = pkgs.python3.withPackages (ps: [ ps.openpyxl ]);
-          script = pkgs.writeShellScript "gen-calendar" ''
-            exec ${python}/bin/python3 ${./gen_calendar.py} "$@"
-          '';
-        in {
-          gen-calendar = { type = "app"; program = toString script; };
-          gcal-search = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };
-          gcal-plan = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-plan}/bin/gcal-plan"; };
-          default = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };
-        });
+      apps = forAllSystems (pkgs: {
+        gen-calendar = { type = "app"; program = "${self.packages.${pkgs.system}.gen-calendar}/bin/gen-calendar"; };
+        gcal-search = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };
+        gcal-plan = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-plan}/bin/gcal-plan"; };
+        default = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };
+      });
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           packages = [
-            (pkgs.python3.withPackages (ps: [ ps.openpyxl ]))
             pkgs.rustc
             pkgs.cargo
             pkgs.gcalcli
