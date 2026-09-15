@@ -967,10 +967,16 @@ fn detail_lines(app: &App, idx: usize) -> Vec<String> {
 // ── gcalcli integrations ────────────────────────────────────────────────────
 
 fn list_accounts() -> Result<Vec<Account>, Box<dyn std::error::Error>> {
-    let mut accounts = vec![Account {
-        name: "Default".to_string(),
-        config_dir: None,
-    }];
+    // Only show a "Default" account if gcalcli's platform data dir actually
+    // holds an oauth token there; otherwise it would be a stale, unauthenticated
+    // placeholder now that accounts live under ~/.config/gcalcli/accounts/*.
+    let mut accounts = Vec::new();
+    if default_data_dir()?.join("oauth").exists() {
+        accounts.push(Account {
+            name: "Default".to_string(),
+            config_dir: None,
+        });
+    }
 
     let dir = home_dir()?.join(ACCOUNTS_DIR);
     if let Ok(entries) = fs::read_dir(&dir) {
@@ -995,6 +1001,22 @@ fn list_accounts() -> Result<Vec<Account>, Box<dyn std::error::Error>> {
     }
 
     Ok(accounts)
+}
+
+/// Resolve gcalcli's default platform data dir (where its oauth lives when no
+/// XDG_DATA_HOME override is applied), mirroring platformdirs.user_data_path.
+fn default_data_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    if let Ok(home) = std::env::var("XDG_DATA_HOME") {
+        if !home.is_empty() {
+            return Ok(PathBuf::from(home).join("gcalcli"));
+        }
+    }
+    let home = home_dir()?;
+    if cfg!(target_os = "macos") {
+        Ok(home.join("Library/Application Support/gcalcli"))
+    } else {
+        Ok(home.join(".local/share/gcalcli"))
+    }
 }
 
 fn home_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
