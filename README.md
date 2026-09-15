@@ -120,27 +120,34 @@ nix run .#gcal-plan -- list deadbeef
 
 ## gcal-browse
 
-Interactive TUI to pick an account, pick a calendar (arrow keys or Emacs bindings), and browse its upcoming events with search.
+Interactive TUI to pick an account, pick a calendar, and browse its upcoming events with search. Its look, feel, and keyboard navigation are modeled after [k9s](https://github.com/derailed/k9s) (Dracula-style palette, table views, a menu bar and command prompt).
 
 ```
 nix run .#gcal-browse
 ```
 
-On startup `gcal-browse` shows an account selector, then lists the selected account's calendars. Navigate any list with arrow keys / `j`/`k` or Emacs bindings (`C-n`, `C-p`, `C-f`, `C-b`, `C-g`/`Home` to top, `g`/`End` to bottom), then press `Enter` to select.
+On startup `gcal-browse` shows an account selector, then lists the selected account's calendars. Each list is rendered as a table with the current row highlighted. Navigate with arrow keys / `j`/`k` (Emacs `C-n`/`C-p` also work), then press `Enter` to select.
 
-The event view shows upcoming events (from today onward, through far future) ordered by date for the selected calendar. Keys in the event view:
+Navigation and commands match k9s conventions:
 
-- `↑/↓`, `j`/`k`, or Emacs `C-n`/`C-p`/`C-f`/`C-b` — move selection
-- `Enter` — open the event detail page
-- `/` or `C-s` — start a search; type, then `Enter` to apply, `Esc` to cancel
-- `c` — switch back to the calendar list; `a` — switch back to the account selector
-- `q` or `Esc` — quit
+- `j`/`k`, `↑`/`↓`, `PageUp`/`PageDown`/`Space` — move (and page) through a list
+- `g` / `G` — jump to the top / bottom
+- `Enter` or `d` — select a row / open the event detail page
+- `/` — start a filter in the command prompt; type, then `Enter` to apply, `Esc` to cancel
+- `:` — enter command mode (`:q` quits, `:refresh` reloads)
+- `?` — toggle the help/keybindings overlay
+- `esc` — go back one level (detail → events → calendars → accounts)
+- `ctrl-r` — refresh the current view
+- `q`, `ctrl-c`, `F1`, or `:q` — quit
 
 In the event detail page:
 
 - `j`/`k`, `↑`/`↓`, `PageUp`/`PageDown`/`Space` — scroll the detail
 - `n` / `p` — view the next / previous event's detail
-- `Esc`, `Enter`, `c`, or `q` — return to the event list
+- `g` / `G` — jump to the top / bottom
+- `esc` — return to the event list
+
+Times are shown with the local timezone abbreviation (e.g. `18:00 CDT`).
 
 ### Accounts
 
