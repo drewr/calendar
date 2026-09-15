@@ -4,7 +4,7 @@ Tools for managing calendars from the command line.
 
 ## Requirements
 
-`gen-calendar` has no external dependencies. `gcal-plan` and `gcal-search` require [gcalcli](https://github.com/insanum/gcalcli) to be authenticated first — run `gcalcli list` to verify your account is connected.
+`gen-calendar` has no external dependencies. `gcal-plan`, `gcal-search`, and `gcal-browse` require [gcalcli](https://github.com/insanum/gcalcli) to be authenticated first — run `gcalcli list` to verify your account is connected.
 
 ---
 
@@ -118,6 +118,51 @@ nix run .#gcal-plan -- list deadbeef
 
 ---
 
+## gcal-browse
+
+Interactive TUI to pick an account, pick a calendar (arrow keys or Emacs bindings), and browse its upcoming events with search.
+
+```
+nix run .#gcal-browse
+```
+
+On startup `gcal-browse` shows an account selector, then lists the selected account's calendars. Navigate any list with arrow keys / `j`/`k` or Emacs bindings (`C-n`, `C-p`, `C-f`, `C-b`, `C-g`/`Home` to top, `g`/`End` to bottom), then press `Enter` to select.
+
+The event view shows upcoming events (from today onward, through far future) ordered by date for the selected calendar. Keys in the event view:
+
+- `↑/↓`, `j`/`k`, or Emacs `C-n`/`C-p`/`C-f`/`C-b` — move selection
+- `Enter` — open the event detail page
+- `/` or `C-s` — start a search; type, then `Enter` to apply, `Esc` to cancel
+- `c` — switch back to the calendar list; `a` — switch back to the account selector
+- `q` or `Esc` — quit
+
+In the event detail page:
+
+- `j`/`k`, `↑`/`↓`, `PageUp`/`PageDown`/`Space` — scroll the detail
+- `n` / `p` — view the next / previous event's detail
+- `Esc`, `Enter`, `c`, or `q` — return to the event list
+
+### Accounts
+
+Each account is a separate gcalcli data directory holding its own `oauth` auth token. On startup `gcal-browse` always shows a `Default` account (gcalcli's normal data location), plus every subdirectory of `~/.config/gcalcli/accounts/*` that contains an `oauth` token file at `<name>/gcalcli/oauth`.
+
+To add an account, authenticate gcalcli into its own data directory. gcalcli resolves its data dir from `XDG_DATA_HOME` (honored even on macOS), so:
+
+```
+mkdir -p ~/.config/gcalcli/accounts/personal
+XDG_DATA_HOME=~/.config/gcalcli/accounts/personal gcalcli init
+```
+
+This writes the account's token to `~/.config/gcalcli/accounts/personal/gcalcli/oauth`, which `gcal-browse` detects and lists as the `personal` account. When you select it, `gcal-browse` runs gcalcli with `XDG_DATA_HOME` set to that account's folder, so each account keeps its own token and calendars.
+
+### Running via Nix
+
+```
+nix run .#gcal-browse
+```
+
+---
+
 ## gcal-search
 
 Search Google Calendar events and print results as TSV or CSV.
@@ -145,6 +190,7 @@ nix run .#gcal-search -- "standup" --calendar "Datum Engineering" --format csv
 cargo build          # build all binaries
 cargo run --bin gcal-plan -- init
 cargo run --bin gcal-search -- "my query"
+cargo run --bin gcal-browse
 cargo run --bin gen-calendar -- 2026-04-05
 cargo run --bin gen-project-schedule -- 2026-09-01 12
 ```

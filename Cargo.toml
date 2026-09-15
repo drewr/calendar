@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+chrono-tz = "0.10"
 clap = { version = "4", features = ["derive"] }
 chrono = "0.4"
+crossterm = "0.28"
 rand = "0.8"
+ratatui = "0.29"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 rust_xlsxwriter = "0.99.0"

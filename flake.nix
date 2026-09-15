@@ -25,6 +25,10 @@
             export PATH="${pkgs.gcalcli}/bin:$PATH"
             exec ${gcal-search-unwrapped}/bin/gcal-plan "$@"
           '';
+          gcal-browse = pkgs.writeShellScriptBin "gcal-browse" ''
+            export PATH="${pkgs.gcalcli}/bin:$PATH"
+            exec ${gcal-search-unwrapped}/bin/gcal-browse "$@"
+          '';
           gen-calendar = gcal-search-unwrapped;
           gen-project-schedule = gcal-search-unwrapped;
         });
@@ -34,6 +38,7 @@
         gen-project-schedule = { type = "app"; program = "${self.packages.${pkgs.system}.gen-project-schedule}/bin/gen-project-schedule"; };
         gcal-search = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };
         gcal-plan = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-plan}/bin/gcal-plan"; };
+        gcal-browse = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-browse}/bin/gcal-browse"; };
         default = { type = "app"; program = "${self.packages.${pkgs.system}.gcal-search}/bin/gcal-search"; };
       });
 
