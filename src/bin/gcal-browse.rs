@@ -22,6 +22,7 @@ const ACCOUNTS_DIR: &str = ".config/gcalcli/accounts";
 const FG: Color = Color::Rgb(0xf8, 0xf8, 0xf2);
 const BG: Color = Color::Rgb(0x28, 0x2a, 0x36);
 const SEL: Color = Color::Rgb(0x44, 0x47, 0x5a); // current line / selection
+const SEP: Color = Color::Rgb(0x6b, 0x6b, 0x7b); // day-group separator
 const COMM: Color = Color::Rgb(0x62, 0x72, 0xa4); // comment / muted
 const CYAN: Color = Color::Rgb(0x8b, 0xe9, 0xfd);
 const GREEN: Color = Color::Rgb(0x50, 0xfa, 0x7b);
@@ -301,13 +302,12 @@ fn handle_calendars_key(key: KeyEvent, app: &mut App) -> Result<(), Box<dyn std:
 
 fn handle_events_key(key: KeyEvent, app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-    let n = app.events.len();
     let page = app.page_hint as isize;
     match key.code {
         KeyCode::Esc => go_back(app),
         KeyCode::Enter | KeyCode::Char('d') => {
-            if let Some(i) = app.events_state.selected() {
-                if i < app.events.len() {
+            if let Some(row) = app.events_state.selected() {
+                if let Some(i) = event_index_at_row(&app.events, row) {
                     app.detail_index = Some(i);
                     app.detail_scroll = 0;
                     app.detail_lines = detail_lines(app, i);
@@ -319,14 +319,18 @@ fn handle_events_key(key: KeyEvent, app: &mut App) -> Result<(), Box<dyn std::er
         KeyCode::Char('/') => start_filter(app),
         KeyCode::Char(':') => start_command(app),
         KeyCode::Char('r') if ctrl => app.loading = true,
-        KeyCode::Down | KeyCode::Char('j') if !ctrl => step_list(n, 1, &mut app.events_state),
-        KeyCode::Up | KeyCode::Char('k') if !ctrl => step_list(n, -1, &mut app.events_state),
-        KeyCode::Char('n') if ctrl => step_list(n, 1, &mut app.events_state),
-        KeyCode::Char('p') if ctrl => step_list(n, -1, &mut app.events_state),
-        KeyCode::PageDown | KeyCode::Char(' ') => page_list(n, 1, page, &mut app.events_state),
-        KeyCode::PageUp => page_list(n, -1, page, &mut app.events_state),
+        KeyCode::Down | KeyCode::Char('j') if !ctrl => step_events(&app.events, 1, &mut app.events_state),
+        KeyCode::Up | KeyCode::Char('k') if !ctrl => step_events(&app.events, -1, &mut app.events_state),
+        KeyCode::Char('n') if ctrl => step_events(&app.events, 1, &mut app.events_state),
+        KeyCode::Char('p') if ctrl => step_events(&app.events, -1, &mut app.events_state),
+        KeyCode::PageDown | KeyCode::Char(' ') => page_events(&app.events, 1, page, &mut app.events_state),
+        KeyCode::PageUp => page_events(&app.events, -1, page, &mut app.events_state),
         KeyCode::Char('g') => set_list(0, &mut app.events_state),
-        KeyCode::Char('G') => set_list(n.saturating_sub(1), &mut app.events_state),
+        KeyCode::Char('G') => {
+            if let Some(last) = app.events.len().checked_sub(1) {
+                set_list(event_row(&app.events, last), &mut app.events_state);
+            }
+        }
         _ => {}
     }
     Ok(())
@@ -455,6 +459,48 @@ fn page_list(n: usize, dir: isize, page: isize, state: &mut ListState) {
     state.select(Some(next));
 }
 
+/// Returns the visual list row for an event.  A separator is inserted before
+/// every event whose date differs from the preceding event's date.
+fn event_row(events: &[CalEvent], event_index: usize) -> usize {
+    event_index
+        + events[..=event_index]
+            .windows(2)
+            .filter(|pair| pair[0].date != pair[1].date)
+            .count()
+}
+
+/// Maps a visual list row back to an event, returning `None` for separators.
+fn event_index_at_row(events: &[CalEvent], row: usize) -> Option<usize> {
+    events
+        .iter()
+        .enumerate()
+        .find_map(|(index, _)| (event_row(events, index) == row).then_some(index))
+}
+
+fn step_events(events: &[CalEvent], delta: isize, state: &mut ListState) {
+    let Some(current_row) = state.selected() else {
+        state.select((!events.is_empty()).then_some(0));
+        return;
+    };
+    let Some(current_event) = event_index_at_row(events, current_row) else {
+        return;
+    };
+    let next = (current_event as isize + delta).clamp(0, events.len() as isize - 1) as usize;
+    state.select(Some(event_row(events, next)));
+}
+
+fn page_events(events: &[CalEvent], dir: isize, page: isize, state: &mut ListState) {
+    if events.is_empty() {
+        return;
+    }
+    let current = state
+        .selected()
+        .and_then(|row| event_index_at_row(events, row))
+        .unwrap_or(0) as isize;
+    let next = (current + dir * page.max(1)).clamp(0, events.len() as isize - 1) as usize;
+    state.select(Some(event_row(events, next)));
+}
+
 fn detail_scroll(app: &mut App, delta: isize) {
     let n = app.detail_lines.len();
     if n == 0 {
@@ -475,7 +521,7 @@ fn detail_next(app: &mut App, delta: isize) {
     app.detail_index = Some(next);
     app.detail_scroll = 0;
     app.detail_lines = detail_lines(app, next);
-    app.events_state.select(Some(next));
+    app.events_state.select(Some(event_row(&app.events, next)));
 }
 
 // ── Drawing ─────────────────────────────────────────────────────────────────
@@ -736,12 +782,12 @@ fn draw_events(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
     let mut prev_date: Option<&str> = None;
     for e in &app.events {
         if prev_date.is_some() && prev_date != Some(e.date.as_str()) {
-            // Faint grey bar separating consecutive day groups.
+            // A half-height, light-grey bar separating consecutive day groups.
             let sep_width = area.width.max(1) as usize;
             let separator = ListItem::new(
                 Line::from(Span::styled(
-                    " ".repeat(sep_width),
-                    Style::default().fg(SEL).bg(SEL),
+                    "▄".repeat(sep_width),
+                    Style::default().fg(SEP).bg(BG),
                 )),
             );
             items.push(separator);
@@ -1201,4 +1247,35 @@ fn load_events(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
 
     app.events = events;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn event(date: &str) -> CalEvent {
+        CalEvent {
+            date: date.into(),
+            time: "09:00".into(),
+            end_date: String::new(),
+            end_time: String::new(),
+            title: String::new(),
+            desc: String::new(),
+            location: String::new(),
+            url: String::new(),
+            calendar: String::new(),
+            email: String::new(),
+        }
+    }
+
+    #[test]
+    fn event_rows_skip_day_separators() {
+        let events = vec![event("2026-09-17"), event("2026-09-17"), event("2026-09-18")];
+
+        assert_eq!(event_row(&events, 0), 0);
+        assert_eq!(event_row(&events, 1), 1);
+        assert_eq!(event_row(&events, 2), 3);
+        assert_eq!(event_index_at_row(&events, 2), None);
+        assert_eq!(event_index_at_row(&events, 3), Some(2));
+    }
 }
