@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
 
+use chrono::Datelike;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::execute;
 use crossterm::terminal::{
@@ -459,13 +460,27 @@ fn page_list(n: usize, dir: isize, page: isize, state: &mut ListState) {
     state.select(Some(next));
 }
 
-/// Returns the visual list row for an event.  A separator is inserted before
-/// every event whose date differs from the preceding event's date.
+/// Returns whether `current` starts a new Monday-based week after `previous`.
+fn starts_new_week(previous: &CalEvent, current: &CalEvent) -> bool {
+    let week_start = |date: &str| {
+        chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+            .ok()
+            .map(|date| date - chrono::Duration::days(date.weekday().num_days_from_monday() as i64))
+    };
+
+    match (week_start(&previous.date), week_start(&current.date)) {
+        (Some(previous), Some(current)) => previous != current,
+        _ => previous.date != current.date,
+    }
+}
+
+/// Returns the visual list row for an event. A separator is inserted before
+/// every event whose Monday-based week differs from the preceding event's.
 fn event_row(events: &[CalEvent], event_index: usize) -> usize {
     event_index
         + events[..=event_index]
             .windows(2)
-            .filter(|pair| pair[0].date != pair[1].date)
+            .filter(|pair| starts_new_week(&pair[0], &pair[1]))
             .count()
 }
 
@@ -779,10 +794,10 @@ fn draw_events(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
     }
     let tz = tz_abbr();
     let mut items: Vec<ListItem> = Vec::new();
-    let mut prev_date: Option<&str> = None;
+    let mut previous_event: Option<&CalEvent> = None;
     for e in &app.events {
-        if prev_date.is_some() && prev_date != Some(e.date.as_str()) {
-            // A half-height, light-grey bar separating consecutive day groups.
+        if previous_event.is_some_and(|previous| starts_new_week(previous, e)) {
+            // A half-height, light-grey bar separating consecutive Monday-based weeks.
             let sep_width = area.width.max(1) as usize;
             let separator = ListItem::new(
                 Line::from(Span::styled(
@@ -792,7 +807,7 @@ fn draw_events(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
             );
             items.push(separator);
         }
-        prev_date = Some(&e.date);
+        previous_event = Some(e);
         let date_label = match chrono::NaiveDate::parse_from_str(&e.date, "%Y-%m-%d") {
             Ok(d) => format!("{} {}", e.date, d.format("%a").to_string().to_uppercase()),
             Err(_) => e.date.clone(),
@@ -1269,13 +1284,19 @@ mod tests {
     }
 
     #[test]
-    fn event_rows_skip_day_separators() {
-        let events = vec![event("2026-09-17"), event("2026-09-17"), event("2026-09-18")];
+    fn event_rows_skip_monday_based_week_separators() {
+        let events = vec![
+            event("2026-09-17"),
+            event("2026-09-17"),
+            event("2026-09-18"),
+            event("2026-09-21"),
+        ];
 
         assert_eq!(event_row(&events, 0), 0);
         assert_eq!(event_row(&events, 1), 1);
-        assert_eq!(event_row(&events, 2), 3);
-        assert_eq!(event_index_at_row(&events, 2), None);
-        assert_eq!(event_index_at_row(&events, 3), Some(2));
+        assert_eq!(event_row(&events, 2), 2);
+        assert_eq!(event_row(&events, 3), 4);
+        assert_eq!(event_index_at_row(&events, 3), None);
+        assert_eq!(event_index_at_row(&events, 4), Some(3));
     }
 }
