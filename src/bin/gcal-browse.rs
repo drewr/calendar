@@ -732,28 +732,38 @@ fn draw_events(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
         return;
     }
     let tz = tz_abbr();
-    let items: Vec<ListItem> = app
-        .events
-        .iter()
-        .map(|e| {
-            let date_label = match chrono::NaiveDate::parse_from_str(&e.date, "%Y-%m-%d") {
-                Ok(d) => format!("{} {}", e.date, d.format("%a").to_string().to_uppercase()),
-                Err(_) => e.date.clone(),
-            };
-            let mut spans = vec![
-                Span::styled(date_label, st().fg(YELLOW)),
-                Span::raw("  "),
-                Span::styled(format!("{:<11}", fmt_time(&e.time, &tz)), st().fg(CYAN)),
-                Span::raw("  "),
-                Span::styled(&e.title, st()),
-            ];
-            if !e.desc.is_empty() {
-                spans.push(Span::raw("  —  "));
-                spans.push(Span::styled(&e.desc, st().fg(COMM)));
-            }
-            ListItem::new(Line::from(spans))
-        })
-        .collect();
+    let mut items: Vec<ListItem> = Vec::new();
+    let mut prev_date: Option<&str> = None;
+    for e in &app.events {
+        if prev_date.is_some() && prev_date != Some(e.date.as_str()) {
+            // Faint grey bar separating consecutive day groups.
+            let sep_width = area.width.max(1) as usize;
+            let separator = ListItem::new(
+                Line::from(Span::styled(
+                    " ".repeat(sep_width),
+                    Style::default().fg(SEL).bg(SEL),
+                )),
+            );
+            items.push(separator);
+        }
+        prev_date = Some(&e.date);
+        let date_label = match chrono::NaiveDate::parse_from_str(&e.date, "%Y-%m-%d") {
+            Ok(d) => format!("{} {}", e.date, d.format("%a").to_string().to_uppercase()),
+            Err(_) => e.date.clone(),
+        };
+        let mut spans = vec![
+            Span::styled(date_label, st().fg(YELLOW)),
+            Span::raw("  "),
+            Span::styled(format!("{:<11}", fmt_time(&e.time, &tz)), st().fg(CYAN)),
+            Span::raw("  "),
+            Span::styled(&e.title, st()),
+        ];
+        if !e.desc.is_empty() {
+            spans.push(Span::raw("  —  "));
+            spans.push(Span::styled(&e.desc, st().fg(COMM)));
+        }
+        items.push(ListItem::new(Line::from(spans)));
+    }
 
     if items.is_empty() {
         render_center(f, area, "No upcoming events.", COMM);
