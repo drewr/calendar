@@ -736,8 +736,12 @@ fn draw_events(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
         .events
         .iter()
         .map(|e| {
+            let date_label = match chrono::NaiveDate::parse_from_str(&e.date, "%Y-%m-%d") {
+                Ok(d) => format!("{} {}", e.date, d.format("%a").to_string().to_uppercase()),
+                Err(_) => e.date.clone(),
+            };
             let mut spans = vec![
-                Span::styled(&e.date, st().fg(YELLOW)),
+                Span::styled(date_label, st().fg(YELLOW)),
                 Span::raw("  "),
                 Span::styled(format!("{:<11}", fmt_time(&e.time, &tz)), st().fg(CYAN)),
                 Span::raw("  "),
@@ -1177,7 +1181,13 @@ fn load_events(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     events.retain(|e| e.date >= today);
-    events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+    let day_rank = |time: &str| if time == "all-day" { 0 } else { 1 };
+    events.sort_by(|a, b| {
+        a.date
+            .cmp(&b.date)
+            .then(day_rank(&a.time).cmp(&day_rank(&b.time)))
+            .then(a.time.cmp(&b.time))
+    });
 
     app.events = events;
     Ok(())
